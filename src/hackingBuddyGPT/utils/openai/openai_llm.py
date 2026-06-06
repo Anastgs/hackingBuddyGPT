@@ -29,8 +29,8 @@ class OpenAIConnection(LLM):
     api_url: str = parameter(desc="URL of the OpenAI API", default="https://api.openai.com")
     api_path: str = parameter(desc="Path to the OpenAI API", default="/v1/chat/completions")
     api_timeout: int = parameter(desc="Timeout for the API request", default=240)
-    api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=60)
-    api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=3)
+    api_backoff: int = parameter(desc="Backoff time in seconds when running into rate-limits", default=120)
+    api_retries: int = parameter(desc="Number of retries when running into rate-limits", default=10)
 
     def get_response(self, prompt, *, retry: int = 0,azure_retry: int = 0, **kwargs) -> LLMResult:
         if retry >= self.api_retries:
@@ -79,6 +79,9 @@ class OpenAIConnection(LLM):
         # now extract the JSON status message
         # TODO: error handling..
         response = response.json()
+        if "choices" not in response:
+            print(f"[LLM] Unexpected response: {response}")
+            return self.get_response(prompt, retry=retry + 1)
         result = response["choices"][0]["message"]["content"]
         tok_query = response["usage"]["prompt_tokens"]
         tok_res = response["usage"]["completion_tokens"]

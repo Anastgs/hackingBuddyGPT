@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
-import invoke
-from fabric import Connection
-
+import subprocess
+import shutil
 from hackingBuddyGPT.utils.configurable import configurable
 
 
@@ -17,22 +15,31 @@ class SSHConnection:
     keyfilename: str
     port: int = 22
 
-    _conn: Connection = None
-
     def init(self):
-        # create the SSH Connection
-        if self.keyfilename == '' or self.keyfilename == None:
-            conn = Connection(
-                f"{self.username}@{self.host}:{self.port}",
-                connect_kwargs={"password": self.password, "look_for_keys": False, "allow_agent": False},
-            )
-        else: 
-            conn = Connection(
-                f"{self.username}@{self.host}:{self.port}",
-                connect_kwargs={"password": self.password, "key_filename": self.keyfilename, "look_for_keys": False, "allow_agent": False},
-            )
-        self._conn = conn
-        self._conn.open()
+        pass
+
+    def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:
+        ssh_cmd = [
+            "ssh",
+            "-o", "HostKeyAlgorithms=+ssh-rsa",
+            "-o", "PubkeyAcceptedKeyTypes=+ssh-rsa",
+            "-o", "StrictHostKeyChecking=no",
+            "-p", str(self.port),
+            f"{self.username}@{self.host}",
+            cmd
+        ]
+
+        if self.keyfilename and self.keyfilename != '':
+            ssh_cmd.insert(2, "-i")
+            ssh_cmd.insert(3, self.keyfilename)
+        elif shutil.which("sshpass"):
+            ssh_cmd = ["sshpass", "-p", self.password] + ssh_cmd
+
+        try:
+            result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=30)
+            return result.stdout, result.stderr, result.returncode
+        except subprocess.TimeoutExpired:
+            return "", "Timeout", -1
 
     def new_with(self, *, host=None, hostname=None, username=None, password=None, keyfilename=None, port=None) -> "SSHConnection":
         return SSHConnection(
@@ -43,7 +50,3 @@ class SSHConnection:
             keyfilename=keyfilename or self.keyfilename,
             port=port or self.port,
         )
-
-    def run(self, cmd, *args, **kwargs) -> Tuple[str, str, int]:
-        res: Optional[invoke.Result] = self._conn.run(cmd, *args, **kwargs)
-        return res.stdout, res.stderr, res.return_code
