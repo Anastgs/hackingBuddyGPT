@@ -153,7 +153,7 @@ class LocalLogger:
 
     def call_response(self, llm_result: LLMResult) -> int:
         self.system_message(llm_result.prompt)
-        return self.add_message("assistant", llm_result.answer, llm_result.tokens_query, llm_result.tokens_response, llm_result.duration)
+        return self.add_message("assistant", llm_result.answer or "", llm_result.tokens_query, llm_result.tokens_response, llm_result.duration)
 
     def stream_message(self, role: str):
         message_id = self._last_message_id
@@ -272,7 +272,7 @@ class RemoteLogger:
 
     def call_response(self, llm_result: LLMResult) -> int:
         self.system_message(llm_result.prompt)
-        return self.add_message("assistant", llm_result.answer, llm_result.tokens_query, llm_result.tokens_response, llm_result.duration)
+        return self.add_message("assistant", llm_result.answer or "", llm_result.tokens_query, llm_result.tokens_response, llm_result.duration)
 
     def stream_message(self, role: str):
         message_id = self._last_message_id
