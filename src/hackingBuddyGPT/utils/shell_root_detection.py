@@ -12,4 +12,5 @@ def got_root(hostname: str, output: str) -> bool:
         if i.fullmatch(output):
             return True
 
+
     return output.startswith(f"root@{hostname}:")
